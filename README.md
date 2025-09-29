@@ -16,7 +16,7 @@ pip install -e .
 
 ## Usage
 
-### Initializa directus client
+### Initialize directus client
 
 ```python
 from directus_sdk import DirectusClient_V9 as DirectusClient
