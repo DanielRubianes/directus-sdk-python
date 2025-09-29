@@ -1,0 +1,20 @@
+[project]
+name = "directus-sdk"
+version = "1.0.0"
+description = "python SDK for directus client wiht convenience functions"
+authors = [
+    {name = "Jason Cheng"},
+]
+
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "requests>=2.27.1",
+]
+
+[project.urls]
+Repository = "https://github.com/Jason-CKY/directus-sdk-python"
+Issues = "https://github.com/Jason-CKY/directus-sdk-python/issues"
+
+[tool.setuptools.packages.find]
+where = ["src/"]
