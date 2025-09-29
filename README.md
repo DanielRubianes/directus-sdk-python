@@ -19,7 +19,7 @@ pip install -e .
 ### Initializa directus client
 
 ```python
-from directus-sdk import DirectusClient_V9 as DirectusClient
+from directus_sdk import DirectusClient_V9 as DirectusClient
 
 # Create a directus client connection with user static token
 client = DirectusClient(url="http://localhost:8055", token="admin-token")
