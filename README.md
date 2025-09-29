@@ -19,19 +19,19 @@ pip install -e .
 ### Initializa directus client
 
 ```python
-from directus.clients import DirectusClient_V9
+from directus-sdk import DirectusClient_V9 as DirectusClient
 
 # Create a directus client connection with user static token
-client = DirectusClient_V9(url="http://localhost:8055", token="admin-token")
+client = DirectusClient(url="http://localhost:8055", token="admin-token")
 
 # Or create a directus client connection with email and password
-client = DirectusClient_V9(url="http://localhost:8055", email="user@example.com", password="password")
+client = DirectusClient(url="http://localhost:8055", email="user@example.com", password="password")
 ```
 
 ### Logging in and out of the client
 
 ```python
-client = DirectusClient_V9(url="http://localhost:8055", email="user@example.com", password="password")
+client = DirectusClient(url="http://localhost:8055", email="user@example.com", password="password")
 
 # Log out and use static token instead
 client.logout()
