@@ -1,2 +1,0 @@
-import directus_sdk
-
