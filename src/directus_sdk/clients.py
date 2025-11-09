@@ -178,7 +178,7 @@ class DirectusClient_V9():
         This helper function helps to delete every item within the collection.
         '''
         pk_name = self.get_pk_field(collection_name)['field']
-        item_ids = [data['id'] for data in self.get(f"/items/{collection_name}?fields={pk_name}", params={"limit": -1})]
+        item_ids = [data[pk_name] for data in self.get(f"/items/{collection_name}?fields={pk_name}", params={"limit": -1})]
         if len(item_ids) == 0:
             raise AssertionError("No items to delete!")
         for i in range(0, len(item_ids), 100):
@@ -199,7 +199,7 @@ class DirectusClient_V9():
         '''
         Return the primary key field of the collection
         '''
-        return [field for field in self.get(f"/fields/{collection_name}") if field['schema']['is_primary_key']][0]
+        return [field for field in self.get(f"/fields/{collection_name}") if field['schema'] and field['schema']['is_primary_key']][0]
     
     def get_all_user_created_collection_names(self) -> list:
         '''
