@@ -180,7 +180,7 @@ class DirectusClient_V9():
         pk_name = self.get_pk_field(collection_name)['field']
         item_ids = [data[pk_name] for data in self.get(f"/items/{collection_name}?fields={pk_name}", params={"limit": -1})]
         if len(item_ids) == 0:
-            raise AssertionError("No items to delete!")
+            return
         for i in range(0, len(item_ids), 100):
             self.delete(f"/items/{collection_name}", json=item_ids[i:i + 100])
 
