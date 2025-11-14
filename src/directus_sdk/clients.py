@@ -1,6 +1,5 @@
-import httpx
+import httpx, json
 from httpx import Response
-from urllib3.exceptions import InsecureRequestWarning
 
 class DirectusClient_V9():
     def __init__(self, url: str, token: str = None, email: str = None, password: str = None):
@@ -83,18 +82,22 @@ class DirectusClient_V9():
             token = ""
         return token
     
-    def get(self, path, output_type: str = "json", **kwargs):
-        data = httpx.get(
+    def request(self, method, path, **kwargs) -> Response:
+        response: Response = httpx.request(
+            method=method,
+            url=f"{self.url}{path}",
+            headers={"Authorization": f"Bearer {self.get_token()}"},
+            **kwargs
+        )
+        return response
+
+    def get(self, path, **kwargs) -> Response:
+        response: Response = httpx.get(
             f"{self.url}{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
-        if 'errors' in data.json():
-            raise AssertionError(data.json()['errors'])
-        if output_type == 'csv':
-            return data.text
-        
-        return data.json()['data']
+        return response
     
     def post(self, path, **kwargs) -> Response:
         response: Response = httpx.post(
@@ -102,10 +105,10 @@ class DirectusClient_V9():
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
-        
         return response
 
     def delete(self, path, **kwargs) -> Response:
+        print(f"{self.url}{path}")
         response: Response = httpx.delete(
             f"{self.url}{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
@@ -123,16 +126,15 @@ class DirectusClient_V9():
         
         return response
 
-    def bulk_insert(self, collection_name: str, items: list, interval: int = 100, verbose: bool = False) -> None:
+    def bulk_insert(self, collection_name: str, items: list, interval: int = 100) -> Response:
         '''
         Post items is capped at 100 items. This function breaks up any list of items more than 100 long and bulk insert
+        Returns repsonse of last request
         '''
         length = len(items)
         for i in range(0, length, interval):
             response: Response = self.post(f"/items/{collection_name}", json=items[i:i + interval])
-            if verbose:
-                print(f"Inserting {i}-{min(i+100, length)} out of {length}")
-                print(response)
+        return response
 
     def duplicate_collection(self, collection_name: str, duplicate_collection_name: str) -> None:
         '''
@@ -162,12 +164,7 @@ class DirectusClient_V9():
         Delete all items from the directus collection. Delete api from directus only able to delete based on ID.
         This helper function helps to delete every item within the collection.
         '''
-        pk_name = self.get_pk_field(collection_name)['field']
-        item_ids = [data[pk_name] for data in self.get(f"/items/{collection_name}?fields={pk_name}", params={"limit": -1})]
-        if len(item_ids) == 0:
-            return
-        for i in range(0, len(item_ids), 100):
-            self.delete(f"/items/{collection_name}", json=item_ids[i:i + 100])
+        self.request("DELETE", f"/items/{collection_name}", json={"query":{"limit": -1}})
 
     def get_all_fields(self, collection_name: str) -> list:
         '''
@@ -179,12 +176,6 @@ class DirectusClient_V9():
                 field['meta'].pop('id')
 
         return fields
-    
-    def get_pk_field(self, collection_name: str) -> dict:
-        '''
-        Return the primary key field of the collection
-        '''
-        return [field for field in self.get(f"/fields/{collection_name}") if field['schema'] and field['schema']['is_primary_key']][0]
     
     def get_all_user_created_collection_names(self) -> list:
         '''
