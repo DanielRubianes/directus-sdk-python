@@ -1,14 +1,9 @@
-import requests
+import httpx
+from httpx import Response
 from urllib3.exceptions import InsecureRequestWarning
 
 class DirectusClient_V9():
-    def __init__(self, url: str, token: str = None, email: str = None, password: str = None, verify: bool = False):
-        self.verify = verify
-        if not self.verify:
-            requests.packages.urllib3.disable_warnings(
-                category=InsecureRequestWarning
-            )
-
+    def __init__(self, url: str, token: str = None, email: str = None, password: str = None):
         self.url = url
         if token is not None:
             self.static_token = token
@@ -34,7 +29,7 @@ class DirectusClient_V9():
             self.email = email
             self.password = password
         
-        auth = requests.post(
+        auth = httpx.post(
             f"{self.url}/auth/login",
             json={
                 "email": email,
@@ -52,10 +47,9 @@ class DirectusClient_V9():
         '''
         if refresh_token is None:
             refresh_token = self.refresh_token
-        auth = requests.post(
+        auth = httpx.post(
             f"{self.url}/auth/logout",
-            json={"refresh_token": refresh_token},
-            verify=self.verify
+            json={"refresh_token": refresh_token}
         )
         self.temporary_token = None
         self.refresh_token = None
@@ -66,12 +60,11 @@ class DirectusClient_V9():
         '''
         if refresh_token is None:
             refresh_token = self.refresh_token
-        auth = requests.post(
+        auth = httpx.post(
             f"{self.url}/auth/refresh",
             json={
                 "refresh_token": refresh_token
-            },
-            verify=self.verify
+            }
         ).json()['data']
 
         self.temporary_token = auth['access_token']
@@ -91,10 +84,9 @@ class DirectusClient_V9():
         return token
     
     def get(self, path, output_type: str = "json", **kwargs):
-        data = requests.get(
+        data = httpx.get(
             f"{self.url}{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
-            verify=self.verify,
             **kwargs
         )
         if 'errors' in data.json():
@@ -104,40 +96,32 @@ class DirectusClient_V9():
         
         return data.json()['data']
     
-    def post(self, path, **kwargs):
-        x = requests.post(
+    def post(self, path, **kwargs) -> Response:
+        response: Response = httpx.post(
             f"{self.url}{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
-            verify=self.verify,
             **kwargs
         )
-        if x.status_code != 200:
-            raise AssertionError(x.text)
         
-        return x.json()
+        return response
 
-    def delete(self, path, **kwargs):
-        x = requests.delete(
+    def delete(self, path, **kwargs) -> Response:
+        response: Response = httpx.delete(
             f"{self.url}{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
-            verify=self.verify,
-            **kwargs
-        )
-        if x.status_code != 204:
-            raise AssertionError(x.text)
-        
-    def patch(self, path, **kwargs):
-        x = requests.patch(
-            f"{self.url}{path}",
-            headers={"Authorization": f"Bearer {self.get_token()}"},
-            verify=self.verify,
             **kwargs
         )
 
-        if x.status_code not in [200, 204]:
-            raise AssertionError(x.text)
+        return response
         
-        return x.json()
+    def patch(self, path, **kwargs) -> Response:
+        response: Response = httpx.patch(
+            f"{self.url}{path}",
+            headers={"Authorization": f"Bearer {self.get_token()}"},
+            **kwargs
+        )
+        
+        return response
 
     def bulk_insert(self, collection_name: str, items: list, interval: int = 100, verbose: bool = False) -> None:
         '''
@@ -145,9 +129,10 @@ class DirectusClient_V9():
         '''
         length = len(items)
         for i in range(0, length, interval):
+            response: Response = self.post(f"/items/{collection_name}", json=items[i:i + interval])
             if verbose:
                 print(f"Inserting {i}-{min(i+100, length)} out of {length}")
-            self.post(f"/items/{collection_name}", json=items[i:i + interval])
+                print(response)
 
     def duplicate_collection(self, collection_name: str, duplicate_collection_name: str) -> None:
         '''
