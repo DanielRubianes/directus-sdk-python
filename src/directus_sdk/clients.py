@@ -126,15 +126,19 @@ class DirectusClient_V9():
         
         return response
 
-    def bulk_insert(self, collection_name: str, items: list, interval: int = 100) -> Response:
+    def bulk_insert(self, collection_name: str, items: list, interval: int = 1000) -> None:
         '''
         Post items is capped at 100 items. This function breaks up any list of items more than 100 long and bulk insert
         Returns repsonse of last request
         '''
-        length = len(items)
-        for i in range(0, length, interval):
+        if len(items) == 0:
+            return None
+
+        for i in range(0, len(items), interval):
             response: Response = self.post(f"/items/{collection_name}", json=items[i:i + interval])
-        return response
+            if response.status_code in (400, 500):
+                print(response.content)
+        return None
 
     def duplicate_collection(self, collection_name: str, duplicate_collection_name: str) -> None:
         '''
