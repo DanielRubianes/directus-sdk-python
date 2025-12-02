@@ -85,7 +85,7 @@ class DirectusClient_V9():
     def request(self, method, path, **kwargs) -> Response:
         response: Response = httpx.request(
             method=method,
-            url=f"{self.url}{path}",
+            url=f"{self.url}/{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
@@ -93,7 +93,7 @@ class DirectusClient_V9():
 
     def get(self, path, **kwargs) -> Response:
         response: Response = httpx.get(
-            f"{self.url}{path}",
+            f"{self.url}/{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
@@ -101,16 +101,16 @@ class DirectusClient_V9():
     
     def post(self, path, **kwargs) -> Response:
         response: Response = httpx.post(
-            f"{self.url}{path}",
+            f"{self.url}/{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
         return response
 
     def delete(self, path, **kwargs) -> Response:
-        print(f"{self.url}{path}")
+        print(f"{self.url}/{path}")
         response: Response = httpx.delete(
-            f"{self.url}{path}",
+            f"{self.url}/{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
@@ -119,14 +119,14 @@ class DirectusClient_V9():
         
     def patch(self, path, **kwargs) -> Response:
         response: Response = httpx.patch(
-            f"{self.url}{path}",
+            f"{self.url}/{path}",
             headers={"Authorization": f"Bearer {self.get_token()}"},
             **kwargs
         )
         
         return response
 
-    def bulk_insert(self, collection_name: str, items: list, interval: int = 1000) -> None:
+    def bulk_insert(self, collection_name: str, items: list, interval: int = 500) -> None:
         '''
         Post items is capped at 100 items. This function breaks up any list of items more than 100 long and bulk insert
         Returns repsonse of last request
@@ -135,7 +135,7 @@ class DirectusClient_V9():
             return None
 
         for i in range(0, len(items), interval):
-            response: Response = self.post(f"/items/{collection_name}", json=items[i:i + interval])
+            response: Response = self.post(f"items/{collection_name}", json=items[i:i + interval])
             if response.status_code in (400, 500):
                 print(response.content)
         return None
@@ -144,17 +144,17 @@ class DirectusClient_V9():
         '''
         Duplicate the collection with schema, fields, and data
         '''
-        duplicate_collection = self.get(f"/collections/{collection_name}")
+        duplicate_collection = self.get(f"collections/{collection_name}")
         duplicate_collection['collection'] = duplicate_collection_name
         duplicate_collection['meta']['collection'] = duplicate_collection_name
         duplicate_collection['schema']['name'] = duplicate_collection_name
-        self.post("/collections", json=duplicate_collection)
+        self.post("collections", json=duplicate_collection)
         fields = [
             field for field in self.get_all_fields(collection_name) if not field['schema']['is_primary_key']
         ]
         for field in fields:
-            self.post(f"/fields/{duplicate_collection_name}", json=field)
-        self.bulk_insert(duplicate_collection_name, self.get(f"/items/{collection_name}", params={"limit": -1}))
+            self.post(f"fields/{duplicate_collection_name}", json=field)
+        self.bulk_insert(duplicate_collection_name, self.get(f"items/{collection_name}", params={"limit": -1}))
 
     def collection_exists(self, collection_name: str):
         '''
@@ -168,13 +168,13 @@ class DirectusClient_V9():
         Delete all items from the directus collection. Delete api from directus only able to delete based on ID.
         This helper function helps to delete every item within the collection.
         '''
-        self.request("DELETE", f"/items/{collection_name}", json={"query":{"limit": -1}})
+        self.request("DELETE", f"items/{collection_name}", json={"query":{"limit": -1}})
 
     def get_all_fields(self, collection_name: str) -> list:
         '''
         Return all fields in the directus collection. Remove the id key in metya to avoid errors in inseting this directus field again
         '''
-        fields = self.get(f"/fields/{collection_name}")
+        fields = self.get(f"fields/{collection_name}")
         for field in fields:
             if 'meta' in field and field['meta'] is not None and 'id' in field['meta']:
                 field['meta'].pop('id')
@@ -186,13 +186,13 @@ class DirectusClient_V9():
         Returns all user created collections. By default Directus GET /collections API will return system collections as well which 
         may not always be useful. 
         '''
-        return [ col['collection'] for col in self.get('/collections') if not col['collection'].startswith('directus') ]
+        return [ col['collection'] for col in self.get('collections') if not col['collection'].startswith('directus') ]
     
     def get_all_fk_fields(self, collection_name: str) -> dict:
         '''
         Return all foreign key fields in the directus collection
         '''
-        return [ field for field in self.get(f"/fields/{collection_name}") 
+        return [ field for field in self.get(f"fields/{collection_name}") 
             if 'foreign_key_table' in field['schema'].keys()
             and field['schema']['foreign_key_table'] is not None
         ]
@@ -205,7 +205,7 @@ class DirectusClient_V9():
             "collection": relation["collection"],
             "field": relation["field"],
             "related_collection": relation["related_collection"]
-        } for relation in self.get(f"/relations/{collection_name}")]
+        } for relation in self.get(f"relations/{collection_name}")]
 
     def post_relation(self, relation: dict) -> None:
         '''
@@ -214,7 +214,7 @@ class DirectusClient_V9():
         '''
         assert set(relation.keys()) == set(['collection', 'field', 'related_collection'])
         try:
-            self.post(f"/relations", json=relation)
+            self.post(f"relations", json=relation)
         except AssertionError as e:
             if '"id" has to be unique' in str(e):
                 self.post_relation(relation)
